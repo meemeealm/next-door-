@@ -2,6 +2,10 @@
 
 A localized, community-driven web application designed to reduce food waste and strengthen neighborhood ties. This app allows residents to post extra garden harvests, pantry items, or home-cooked meals for their neighbors to claim.
 
+### 📸 App Preview
+
+| <img src="./imgs/NextDoor1.png" width="45%"/> | <img src="./imgs/NextDoor2.png" width="45%"/> |
+
 --- 
 
 ### ✨ Features
