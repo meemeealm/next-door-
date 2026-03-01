@@ -51,3 +51,11 @@ def toggle_claim(item_id, current_status):
     c.execute("UPDATE food_items SET status = ? WHERE id = ?", (new_status, item_id))
     conn.commit()
     conn.close()
+
+def get_user_items(user_name):
+    conn = sqlite3.connect(db_path)
+    # Using lowercase 'user' to match your schema
+    query = "SELECT * FROM food_items WHERE user = ? ORDER BY posted DESC"
+    df = pd.read_sql_query(query, conn, params=(user_name,))
+    conn.close()
+    return df

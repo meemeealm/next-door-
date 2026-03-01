@@ -3,7 +3,7 @@ import pandas as pd
 from datetime import datetime
 import os
 
-from database import init_db, add_item, get_all_items, toggle_claim
+from database import init_db, add_item, get_all_items, toggle_claim, get_user_items
 
 # 2. Page Configuration
 st.set_page_config(page_title="Neighborhood Food Swap", page_icon="🍎")
@@ -72,7 +72,33 @@ st.markdown("""
 st.info("💡 Pro-tip: If you claim an item, please message the owner to coordinate pickup!")
 
 # 3. Sidebar for Posting
+
+st.sidebar.subheader("👤 Manage My Postings")
+my_name = st.sidebar.text_input("Enter your name to see your posts", placeholder="e.g. Siti")
+
+st.sidebar.divider()
 st.sidebar.header("Post an Item")
+
+
+if my_name:
+    st.header(f"📦 Items posted by {my_name}")
+    my_df = get_user_items(my_name)
+    
+    if not my_df.empty:
+        for index, row in my_df.iterrows():
+            # Create a simple management row
+            m_cols = st.columns([3, 1])
+            with m_cols[0]:
+                status_label = "✅ Available" if row['status'] == 'Available' else "🚩 Reserved"
+                st.write(f"**{row['item']}** ({status_label})")
+            with m_cols[1]:
+                # Allow the owner to toggle the status or potentially delete
+                if st.button("Toggle Status", key=f"manage_{row['id']}"):
+                    toggle_claim(row['id'], row['status'])
+                    st.rerun()
+    else:
+        st.sidebar.info("No postings found for this name.")
+
 with st.sidebar.form("post_form", clear_on_submit=True):
     name = st.text_input("Your Name")
     phone = st.text_input("WhatsApp Number (e.g., 15551234567)")
@@ -85,6 +111,8 @@ with st.sidebar.form("post_form", clear_on_submit=True):
         add_item(name, phone, item, category, qty) 
         st.success("Post added!")
         st.rerun()
+
+
 
 # 4. Search & Filter Section
 
