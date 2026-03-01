@@ -4,7 +4,7 @@ A localized, community-driven web application designed to reduce food waste and 
 
 ### 📸 App Preview
 
-| <img src="./imgs/NextDoor1.png" width="45%"/> | <img src="./imgs/NextDoor2.png" width="45%"/> |
+| <img src="[./imgs/NextDoor1.png](https://github.com/meemeealm/next-door-food-swap-app/blob/main/imgs/NextDoor1.png)" width="45%"/> | <img src="[./imgs/NextDoor2.png](https://github.com/meemeealm/next-door-food-swap-app/blob/main/imgs/NextDoor2.png)" width="45%"/> |
 
 --- 
 
