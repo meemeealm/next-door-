@@ -1,7 +1,3 @@
-<<<<<<< HEAD
-# next-door-
-A community-driven web app built with Streamlit to share surplus food and reduce local waste.
-=======
 ### 🍎 NextDoor: Neighborhood Food Swapping App  
 
 A localized, community-driven web application designed to reduce food waste and strengthen neighborhood ties. This app allows residents to post extra garden harvests, pantry items, or home-cooked meals for their neighbors to claim.
@@ -38,4 +34,3 @@ Clone this repository.
 Install requirements: ``pip install streamlit pandas``.
 
 Run the app: ``streamlit run app.py``.
->>>>>>> bb5c9d9 (Complete Food Swap app with WhatsApp integration and Blue/Green styling)
