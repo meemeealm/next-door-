@@ -1,56 +1,64 @@
 import sqlite3
 import random
 from datetime import datetime, timedelta
+from faker import Faker
 from database import db_path, init_db
 
-# Sample data for randomization
-# Names (Mix of PH, MY, ID, SG vibes)
-NAMES = [
-    "Siti", "Jun", "Mateo", "Linh", "Budi", 
-    "Apinya", "Ramesh", "Maria", "Taufik", "Santi"
-]
+# Initialize Faker with local setting
+fake = Faker(['en_PH', 'en_US']) 
 
-# Items (SEA Staples)
-ITEMS = {
-    "Vegetables": ["Eggplant (Talong)", "Bitter Gourd (Ampalaya)", "Kangkong", "Bok Choy", "Okra"],
-    "Fruit": ["Mangoes (Carabao)", "Durian", "Calamansi", "Rambutan", "Papaya"],
-    "Cooked Meal": ["Adobo", "Nasi Lemak", "Pad Thai", "Beef Rendang", "Pancit Canton"],
-    "Herbs": ["Lemongrass", "Pandan Leaves", "Thai Basil", "Turmeric", "Curry Leaves"],
-    "Other": ["Ube Halaya", "Coconut Milk", "Sambal Paste", "Fish Sauce", "Salted Eggs"]
+# Specific SEA items to keep the "Pasar" vibe
+FOOD_ITEMS = {
+    "Vegetables": ["Talong", "Ampalaya", "Kangkong", "Bok Choy", "Okra", "Sitaw"],
+    "Fruit": ["Carabao Mango", "Calamansi", "Rambutan", "Papaya", "Lanzones"],
+    "Cooked Meal": ["Adobo", "Pancit Canton", "Sinigang", "Lumpia", "Biko"],
+    "Herbs": ["Lemongrass", "Pandan", "Thai Basil", "Turmeric", "Curry Leaves"],
+    "Other": ["Ube Halaya", "Coconut Milk", "Salted Eggs", "Patis"]
 }
 
-# Quantities (Local phrasing)
-QUANTITIES = ["1 kg", "3 bundles", "1 tupperware", "5 pieces", "1 bowl", "Small plastic bag"]
+# Neighborhood Center (Bacoor/Las Piñas area)
+BASE_LAT = 14.4445
+BASE_LON = 120.9473
 
-def seed_database(num_entries=10):
-    # Ensure the table exists first
-    init_db()
-    
+def seed_database(num_entries=40):
+    init_db() # Ensure schema is ready
     conn = sqlite3.connect(db_path)
     c = conn.cursor()
     
-    print(f"Generating {num_entries} random food items...")
-    
+    print(f"🚀 Generating {num_entries} realistic neighborhood posts...")
+
     for _ in range(num_entries):
-        user = random.choice(NAMES)
-        phone = f"1{random.randint(100, 999)}{random.randint(100, 999)}{random.randint(1000, 9999)}"
-        category = random.choice(list(ITEMS.keys()))
-        item = random.choice(ITEMS[category])
-        qty = random.choice(QUANTITIES)
+        # 1. Real-sounding local name
+        user = fake.name()
         
-        # Create a random date within the last 3 days
-        random_days = random.randint(0, 3)
-        random_date = (datetime.now() - timedelta(days=random_days)).strftime("%Y-%m-%d %H:%M")
+        # 2. Localized phone number
+        phone = fake.phone_number()
+        
+        # 3. Category & Item logic
+        category = random.choice(list(FOOD_ITEMS.keys()))
+        item_base = random.choice(FOOD_ITEMS[category])
+        item = f"{fake.word().capitalize()} {item_base}" # e.g. "Fresh Talong"
+        
+        # 4. Quantity
+        qty = f"{random.randint(1, 5)} {random.choice(['kg', 'bundles', 'packs', 'pcs'])}"
+        
+        # 5. Precise Timestamp (ISO format for SQL sorting)
+        posted = fake.date_time_between(start_date='-3d', end_date='now').strftime("%Y-%m-%d %H:%M:%S")
+        
+        # 6. Realistic Local Coordinates
+        # 0.02 range keeps pins within a few kilometers
+        lat = float(fake.coordinate(center=BASE_LAT, radius=0.03))
+        lon = float(fake.coordinate(center=BASE_LON, radius=0.03))
 
         c.execute('''
-            INSERT INTO food_items (user, phone, item, category, quantity, posted, status) 
-            VALUES (?, ?, ?, ?, ?, ?, ?)''', 
-            (user, phone, item, category, qty, random_date, 'Available')
+            INSERT INTO food_items (user, phone, item, category, quantity, posted, status, lat, lon) 
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)''', 
+            (user, phone, item, category, qty, posted, 'Available', lat, lon)
         )
     
     conn.commit()
     conn.close()
-    print("✅ Success! Database is now seeded with fresh food.")
+    print("✅ Success! Database seeded with high-quality test data.")
 
 if __name__ == "__main__":
-    seed_database(40) # Change this number for more or less data
+    seed_database(60)

@@ -6,6 +6,7 @@ dist/
 wheels/
 *.egg-info
 .streamlit/
+test.py
 
 # Virtual environments
 .venv

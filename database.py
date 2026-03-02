@@ -1,6 +1,7 @@
 import sqlite3
 import os
 import pandas as pd
+import datetime
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 db_path = os.path.join(BASE_DIR, "data", "food_swap.db")
@@ -17,7 +18,9 @@ def init_db():
             category TEXT,
             quantity TEXT,
             posted DATETIME DEFAULT CURRENT_TIMESTAMP,
-            status TEXT DEFAULT 'Available'
+            status TEXT DEFAULT 'Available',
+            lat REAL, 
+            lon REAL
         )
     ''')
     conn.commit()
@@ -25,14 +28,15 @@ def init_db():
     print("Database initialized!") 
 
 
-def add_item(user, phone, item, category, quantity):
+def add_item(user, phone, item, category, quantity, lat, lon):
     conn = sqlite3.connect(db_path)
-    c = conn.cursor()
-    c.execute('''
-        INSERT INTO food_items (user, phone, item, category, quantity) 
-        VALUES (?, ?, ?, ?, ?)''', 
-        (user, phone, item, category, quantity)
-    )
+    # Using ISO format with seconds for perfect 'Newest First' sorting
+    now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    
+    query = """INSERT INTO food_items (user, phone, item, category, quantity, posted, status, lat, lon) 
+               VALUES (?, ?, ?, ?, ?, ?, 'Available', ?, ?)"""
+    
+    conn.execute(query, (user, phone, item, category, quantity, now, lat, lon))
     conn.commit()
     conn.close()
 

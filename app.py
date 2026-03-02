@@ -2,8 +2,8 @@ import streamlit as st
 import pandas as pd
 from datetime import datetime
 import os
-
 from database import init_db, add_item, get_all_items, toggle_claim, get_user_items
+import pydeck as pdk
 
 # 2. Page Configuration
 st.set_page_config(page_title="Neighborhood Food Swap", page_icon="🍎")
@@ -71,7 +71,7 @@ st.markdown("""
 
 st.info("💡 Pro-tip: If you claim an item, please message the owner to coordinate pickup!")
 
-# 3. Sidebar for Posting
+# Sidebar for Posting
 
 # --- SIDEBAR START ---
 st.sidebar.header("Post an Item")
@@ -125,6 +125,16 @@ if manage_lookup:
 
 # 4. Search & Filter Section
 
+# Fetch data from DB
+df = get_all_items()
+
+# FORCE the sort right here
+if not df.empty:
+    # Convert 'posted' to actual datetime objects so Pandas knows how to sort them
+    df['posted'] = pd.to_datetime(df['posted'])
+    # Sort by newest first
+    df = df.sort_values(by='posted', ascending=False)
+
 df = get_all_items() # Pulls from SQLite as a DataFrame
 st.divider()
 search_col, cat_col = st.columns([2, 1])
@@ -152,34 +162,93 @@ if selected_cat != "All":
 if 'claimed_indices' not in st.session_state:
     st.session_state.claimed_indices = []
 
+# Create the tabs
+tab1, tab2 = st.tabs(["📋 List View", "📍 Interactive Map"])
 
-# 5. The Main Display Loop
-if not df.empty:
-    for index, row in df.iterrows():
-        # Check status from the DATABASE column, not session_state
-        is_claimed = (row['status'] == 'Reserved')
-        
-        cols = st.columns([3, 1, 1], vertical_alignment="center")
-        
-        with cols[0]:
-            if is_claimed:
-                st.markdown(f"### ~~{row['item']}~~")
-                st.caption(f"🚩 Reserved by a neighbor (Owner: {row['user']})")
-            else:
-                st.markdown(f"### {row['item']}")
-                st.write(f"**Owner:** {row['user']} | **Qty:** {row['quantity']}")
-
-        with cols[1]:
-            wa_link = f"https://wa.me/{row['phone']}?text=Hi%20{row['user']},%20is%20the%20{row['item']}%20still%20available?"
-            st.markdown(f'<a href="{wa_link}" target="_blank" class="wa-btn">💬 WhatsApp</a>', unsafe_allow_html=True)
-
-        with cols[2]:
-            # The Button now talks to the DB
-            button_label = "Undo ↩️" if is_claimed else "Claim"
-            button_key = f"btn_{row['id']}" # Use the SQL ID as the key
+# 6. The Main Display Loop
+with tab1:
+    if not df.empty:
+        for index, row in df.iterrows():
+            # Check status from the DATABASE column, not session_state
+            is_claimed = (row['status'] == 'Reserved')
             
-            if st.button(button_label, key=button_key):
-                from database import toggle_claim
-                toggle_claim(row['id'], row['status'])
-                st.rerun() # Refresh to show the new status to everyone
-        st.divider()
+            cols = st.columns([3, 1, 1], vertical_alignment="center")
+            
+            with cols[0]:
+                if is_claimed:
+                    st.markdown(f"### ~~{row['item']}~~")
+                    st.caption(f"🚩 Reserved by a neighbor (Owner: {row['user']})")
+                else:
+                    st.markdown(f"### {row['item']}")
+                    st.write(f"**Owner:** {row['user']} | **Qty:** {row['quantity']}")
+
+            with cols[1]:
+                wa_link = f"https://wa.me/{row['phone']}?text=Hi%20{row['user']},%20is%20the%20{row['item']}%20still%20available?"
+                st.markdown(f'<a href="{wa_link}" target="_blank" class="wa-btn">💬 WhatsApp</a>', unsafe_allow_html=True)
+
+            with cols[2]:
+                # The Button now talks to the DB
+                button_label = "Undo ↩️" if is_claimed else "Claim"
+                button_key = f"btn_{row['id']}" # Use the SQL ID as the key
+                
+                if st.button(button_label, key=button_key):
+                    from database import toggle_claim
+                    toggle_claim(row['id'], row['status'])
+                    st.rerun() # Refresh to show the new status to everyone
+            st.divider()
+
+
+with tab2:
+    st.subheader("📍 Neighborhood Food Map")
+    
+    # Filter for Available items
+    map_df = df[df['status'] == 'Available'].copy()
+
+    # Define colors (R, G, B, Alpha)
+    CATEGORY_COLORS = {
+        "Vegetables": [34, 139, 34, 160],   # Forest Green
+        "Fruit": [255, 165, 0, 160],        # Orange
+        "Cooked Meal": [220, 20, 60, 160],  # Crimson Red
+        "Herbs": [124, 252, 0, 160],       # Lawn Green
+        "Other": [128, 128, 128, 160]      # Gray
+    }
+
+    if not map_df.empty:
+        # Create a new column 'color' based on the category
+        # If category isn't in our dict, default to Gray
+        map_df['color'] = map_df['category'].map(lambda x: CATEGORY_COLORS.get(x, [128, 128, 128, 160]))
+
+        view_state = pdk.ViewState(
+            latitude=map_df['lat'].mean(),
+            longitude=map_df['lon'].mean(),
+            zoom=12,
+            pitch=0,
+        )
+
+        layer = pdk.Layer(
+            'ScatterplotLayer',
+            data=map_df,
+            get_position='[lon, lat]',
+            get_color='color',  # Tell Pydeck to look at our new 'color' column
+            get_radius=150,
+            pickable=True,
+        )
+
+        st.pydeck_chart(pdk.Deck(
+        # This uses CartoDB's Positron tiles which are reliable and free
+        map_style='https://basemaps.cartocdn.com/gl/positron-gl-style/style.json',
+        initial_view_state=view_state,
+        layers=[layer],
+        tooltip={
+            "html": "<b>{item}</b><br/>Cat: {category}<br/>Owner: {user}",
+            "style": {"color": "white", "backgroundColor": "#333"}
+        }
+))
+        
+        # Add a small Legend so users know what the colors mean
+        st.write("### Legend")
+        cols = st.columns(len(CATEGORY_COLORS))
+        for i, (cat, color) in enumerate(CATEGORY_COLORS.items()):
+            cols[i].markdown(f'<span style="color:rgb({color[0]},{color[1]},{color[2]})">●</span> {cat}', unsafe_allow_html=True)
+    else:
+        st.info("No active locations to show.")
