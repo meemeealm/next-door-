@@ -1,7 +1,7 @@
 import sqlite3
 import os
 import pandas as pd
-import datetime
+from datetime import datetime
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 db_path = os.path.join(BASE_DIR, "data", "food_swap.db")

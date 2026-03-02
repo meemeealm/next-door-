@@ -2,6 +2,7 @@ import streamlit as st
 import pandas as pd
 from datetime import datetime
 import os
+import random
 from database import init_db, add_item, get_all_items, toggle_claim, get_user_items
 import pydeck as pdk
 
@@ -76,19 +77,32 @@ st.info("💡 Pro-tip: If you claim an item, please message the owner to coordin
 # --- SIDEBAR START ---
 st.sidebar.header("Post an Item")
 
-# 1. THE FORM (Creates the 'name' variable)
+# 1. THE FORM 
 with st.sidebar.form("post_form", clear_on_submit=True):
-    name = st.text_input("Your Name")
+    user = st.text_input("Your Name")
     phone = st.text_input("WhatsApp Number (e.g., 60123456789)")
     item = st.text_input("What are you sharing?")
     category = st.selectbox("Category", ["Vegetables", "Fruit", "Cooked Meal", "Herbs", "Other"])
     qty = st.text_input("Quantity")
     submit = st.form_submit_button("Post to Board")
 
-    if submit and name and item:
-        add_item(name, phone, item, category, qty) 
-        st.success("Post added!")
-        st.rerun()
+    if submit:
+        if user and item and phone:
+            # 📍 GENERATE COORDINATES
+            # Since the user isn't typing GPS, we generate a point near Bacoor
+            # 14.4445, 120.9473 is your neighborhood center
+            lat = 14.4445 + random.uniform(-0.01, 0.01)
+            lon = 120.9473 + random.uniform(-0.01, 0.01)
+
+            # 💾 DATABASE CALL
+            # Make sure the order matches your add_item function in database.py
+            from database import add_item
+            add_item(user, phone, item, category, qty, lat, lon)
+            
+            st.success(f"✅ {item} added to the map!")
+            st.rerun() # Refresh the app to show the new item on the map/list
+        else:
+            st.error("Please fill in Name, Item, and Phone!")
 
 st.sidebar.divider()
 
@@ -97,7 +111,7 @@ st.sidebar.subheader("👤 Manage My Postings")
 
 # If the user typed a name in the form, let's show their posts automatically
 # OR they can type a specific name to search
-manage_lookup = st.sidebar.text_input("Enter name to manage posts", value=name if name else "")
+manage_lookup = st.sidebar.text_input("Enter name to manage posts", value=user if user else "")
 
 if manage_lookup:
     my_df = get_user_items(manage_lookup)
