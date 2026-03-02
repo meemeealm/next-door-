@@ -73,38 +73,16 @@ st.info("💡 Pro-tip: If you claim an item, please message the owner to coordin
 
 # 3. Sidebar for Posting
 
-st.sidebar.subheader("👤 Manage My Postings")
-my_name = st.sidebar.text_input("Enter your name to see your posts", placeholder="e.g. Siti")
-
-st.sidebar.divider()
+# --- SIDEBAR START ---
 st.sidebar.header("Post an Item")
 
-
-if my_name:
-    st.header(f"📦 Items posted by {my_name}")
-    my_df = get_user_items(my_name)
-    
-    if not my_df.empty:
-        for index, row in my_df.iterrows():
-            # Create a simple management row
-            m_cols = st.columns([3, 1])
-            with m_cols[0]:
-                status_label = "✅ Available" if row['status'] == 'Available' else "🚩 Reserved"
-                st.write(f"**{row['item']}** ({status_label})")
-            with m_cols[1]:
-                # Allow the owner to toggle the status or potentially delete
-                if st.button("Toggle Status", key=f"manage_{row['id']}"):
-                    toggle_claim(row['id'], row['status'])
-                    st.rerun()
-    else:
-        st.sidebar.info("No postings found for this name.")
-
+# 1. THE FORM (Creates the 'name' variable)
 with st.sidebar.form("post_form", clear_on_submit=True):
     name = st.text_input("Your Name")
-    phone = st.text_input("WhatsApp Number (e.g., 15551234567)")
-    item = st.text_input("What are you sharing? (e.g., Cherry Tomatoes)")
+    phone = st.text_input("WhatsApp Number (e.g., 60123456789)")
+    item = st.text_input("What are you sharing?")
     category = st.selectbox("Category", ["Vegetables", "Fruit", "Cooked Meal", "Herbs", "Other"])
-    qty = st.text_input("Quantity (e.g., 2 lbs, 1 plate)")
+    qty = st.text_input("Quantity")
     submit = st.form_submit_button("Post to Board")
 
     if submit and name and item:
@@ -112,7 +90,38 @@ with st.sidebar.form("post_form", clear_on_submit=True):
         st.success("Post added!")
         st.rerun()
 
+st.sidebar.divider()
 
+# 2. THE MANAGEMENT SECTION (Uses 'name' from the form above)
+st.sidebar.subheader("👤 Manage My Postings")
+
+# If the user typed a name in the form, let's show their posts automatically
+# OR they can type a specific name to search
+manage_lookup = st.sidebar.text_input("Enter name to manage posts", value=name if name else "")
+
+if manage_lookup:
+    my_df = get_user_items(manage_lookup)
+    
+    if not my_df.empty:
+        st.sidebar.caption(f"Postings for '{manage_lookup}'")
+        for index, row in my_df.iterrows():
+            with st.sidebar.expander(f"📦 {row['item']}"):
+                col1, col2 = st.columns(2)
+                
+                with col1:
+                    t_label = "Free" if row['status'] == 'Reserved' else "Reserve"
+                    if st.button(t_label, key=f"tgl_{row['id']}", use_container_width=True):
+                        toggle_claim(row['id'], row['status'])
+                        st.rerun()
+                
+                with col2:
+                    if st.button("🗑️", key=f"del_{row['id']}", use_container_width=True):
+                        from database import delete_item
+                        delete_item(row['id'])
+                        st.rerun()
+    else:
+        st.sidebar.info("No postings found.")
+# --- SIDEBAR END ---
 
 # 4. Search & Filter Section
 

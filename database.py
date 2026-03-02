@@ -59,3 +59,10 @@ def get_user_items(user_name):
     df = pd.read_sql_query(query, conn, params=(user_name,))
     conn.close()
     return df
+
+def delete_item(item_id):
+    conn = sqlite3.connect(db_path)
+    c = conn.cursor()
+    c.execute("DELETE FROM food_items WHERE id = ?", (item_id,))
+    conn.commit()
+    conn.close()
